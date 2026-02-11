@@ -42,9 +42,16 @@ st.markdown("""
 # ─── Helper Functions ────────────────────────────────────────────────
 @st.cache_data(ttl=60)
 def load_data():
-    """Load job data from CSV."""
+    """Load job data and merge with HR leads."""
     if os.path.exists(config.OUTPUT_CSV):
         df = pd.read_csv(config.OUTPUT_CSV)
+        
+        # Load HR leads if they exist
+        leads_file = os.path.join(config.OUTPUT_DIR, "hr_leads.csv")
+        if os.path.exists(leads_file):
+            leads_df = pd.read_csv(leads_file)
+            df = df.merge(leads_df, on="Company Name", how="left")
+            
         return df
     return pd.DataFrame()
 
@@ -122,10 +129,15 @@ def main():
     st.subheader("📋 Job Listings")
 
     # Reorder and rename columns for clarity
-    display_df = filtered_df[[
+    cols_to_show = [
         "Company Name", "Job Title", "Location", "Platform Source", 
         "Date Posted", "Salary Package", "Job Link", "LinkedIn Profile"
-    ]]
+    ]
+    
+    if "HR Emails" in filtered_df.columns:
+        cols_to_show.insert(1, "HR Emails")
+        
+    display_df = filtered_df[cols_to_show]
 
     st.dataframe(
         display_df,

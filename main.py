@@ -12,6 +12,7 @@ import config
 from scrapers import NaukriScraper, IndeedScraper, LinkedInScraper, WellfoundScraper
 from processor import process_jobs, merge_with_existing
 from exporter import export_to_excel, export_to_csv
+import lead_finder
 
 # ─── Logging Setup ───────────────────────────────────────────────────
 logging.basicConfig(
@@ -85,6 +86,13 @@ def run_agent(role: str = None, location: str = None):
     else:
         final_jobs = processed_jobs
 
+    # ── 3. Find HR Leads (Cold Mailing) ──
+    logger.info("🔍 Finding HR Contact Emails for new jobs...")
+    try:
+        lead_finder.update_leads_file()
+    except Exception as e:
+        logger.error(f"Error finding HR leads: {e}")
+        
     # ── 4. Export ──
     excel_path = "N/A"
     csv_path = "N/A"
