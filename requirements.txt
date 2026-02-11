@@ -1,0 +1,9 @@
+requests
+beautifulsoup4
+lxml
+python-jobspy
+openpyxl
+pandas
+schedule
+fuzzywuzzy
+python-Levenshtein
