@@ -137,6 +137,9 @@ def main():
     if "HR Emails" in filtered_df.columns:
         cols_to_show.insert(1, "HR Emails")
         
+    if "HR LinkedIn" in filtered_df.columns:
+        cols_to_show.insert(2, "HR LinkedIn")
+        
     display_df = filtered_df[cols_to_show]
 
     st.dataframe(
@@ -149,6 +152,10 @@ def main():
             "LinkedIn Profile": st.column_config.LinkColumn(
                 "🏢 Info",
                 display_text="Check Company"
+            ),
+            "HR LinkedIn": st.column_config.LinkColumn(
+                "👤 HR LinkedIn",
+                display_text="Find Recruiter"
             ),
             "Date Posted": st.column_config.TextColumn("📅 Posted"),
             "Platform Source": st.column_config.TextColumn("📱 Source"),

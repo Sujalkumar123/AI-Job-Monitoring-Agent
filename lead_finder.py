@@ -1,60 +1,42 @@
 """
-HR Email Lead Finder module.
-Searches for HR/Recruiter emails for companies found in job listings.
+HR Email & LinkedIn Lead Finder module.
+Searches for HR/Recruiter contacts for companies found in job listings.
 """
 
-import re
 import logging
 import pandas as pd
-from googlesearch import search
-import time
-import random
 import os
 import config
 
 logger = logging.getLogger(__name__)
 
-# Email Regex
-EMAIL_REGEX = r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+'
-
-def find_hr_emails(companies: list[str]) -> dict:
+def find_hr_leads(companies: list[str]) -> list[dict]:
     """
-    Search for HR/Recruiter emails for a list of companies.
-    Returns a dictionary mapping company name to a list of emails.
+    Search for HR/Recruiter contacts for a list of companies.
+    Returns a list of dictionaries with contact info.
     """
-    leads = {}
+    leads = []
     
     for company in companies:
-        if not company or company.lower() == "unknown":
+        if not company or str(company).lower() == "nan" or company.lower() == "unknown":
             continue
             
-        logger.info(f"🔍 Searching HR emails for: {company}")
-        query = f'"{company}" HR recruiter email @{company.lower().replace(" ", "")}.com OR "careers" email'
+        logger.info(f"🔍 Finding HR leads for: {company}")
         
-        found_emails = set()
-        try:
-            # Search top 5 results
-            for url in search(query, num_results=5):
-                # We can't easily scrape every page due to blocks, 
-                # but sometimes the snippet contains the email.
-                # googlesearch-python 'search' returns URLs.
-                # To get snippets, we might need a different approach or just search for the email pattern in the query.
-                pass
-            
-            # Since we can't easily get snippets from 'googlesearch-python', 
-            # we will use a fallback logic: common patterns
-            domain = company.lower().replace(" ", "") + ".com"
-            common_patterns = [f"hr@{domain}", f"careers@{domain}", f"recruitment@{domain}"]
-            
-            # Let's try to find them specifically in the search query by searching for the patterns
-            time.sleep(random.uniform(2, 5)) # Avoid rate limits
-            
-        except Exception as e:
-            logger.error(f"Error searching for {company}: {e}")
-            
-        # For this version, we will provide the common patterns as high-probability leads
-        # and mark them as such if we can't verify them.
-        leads[company] = [f"hr@{company.lower().replace(' ', '')}.com", f"careers@{company.lower().replace(' ', '')}.com"]
+        # 1. Emails (Generated Patterns)
+        domain = str(company).lower().replace(" ", "") + ".com"
+        emails = [f"hr@{domain}", f"careers@{domain}"]
+        
+        # 2. LinkedIn HR Search Link
+        # This link searches for People with "HR Recruiter" in their title for this specific company
+        company_query = str(company).replace(" ", "%20")
+        linkedin_link = f"https://www.linkedin.com/search/results/people/?keywords=HR%20Recruiter%20{company_query}"
+        
+        leads.append({
+            "Company Name": company,
+            "HR Emails": ", ".join(emails),
+            "HR LinkedIn": linkedin_link
+        })
         
     return leads
 
@@ -65,17 +47,13 @@ def update_leads_file():
         return
         
     df = pd.read_csv(config.OUTPUT_CSV)
-    companies = df["Company Name"].unique().tolist()
+    # Filter out empty company names
+    companies = df["Company Name"].dropna().unique().tolist()
     
-    leads_map = find_hr_emails(companies)
+    leads_data = find_hr_leads(companies)
     
-    # Create leads dataframe
-    leads_data = []
-    for company, emails in leads_map.items():
-        leads_data.append({
-            "Company Name": company,
-            "HR Emails": ", ".join(emails)
-        })
+    if not leads_data:
+        return
         
     leads_df = pd.DataFrame(leads_data)
     leads_file = os.path.join(config.OUTPUT_DIR, "hr_leads.csv")
