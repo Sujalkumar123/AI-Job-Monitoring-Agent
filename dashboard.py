@@ -134,11 +134,8 @@ def main():
         "Date Posted", "Salary Package", "Job Link", "LinkedIn Profile"
     ]
     
-    if "HR Emails" in filtered_df.columns:
-        cols_to_show.insert(1, "HR Emails")
-        
     if "HR LinkedIn" in filtered_df.columns:
-        cols_to_show.insert(2, "HR LinkedIn")
+        cols_to_show.insert(1, "HR LinkedIn")
         
     display_df = filtered_df[cols_to_show]
 

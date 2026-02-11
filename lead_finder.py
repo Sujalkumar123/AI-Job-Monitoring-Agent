@@ -23,18 +23,11 @@ def find_hr_leads(companies: list[str]) -> list[dict]:
             
         logger.info(f"🔍 Finding HR leads for: {company}")
         
-        # 1. Emails (Generated Patterns)
-        domain = str(company).lower().replace(" ", "") + ".com"
-        emails = [f"hr@{domain}", f"careers@{domain}"]
-        
-        # 2. LinkedIn HR Search Link
-        # This link searches for People with "HR Recruiter" in their title for this specific company
         company_query = str(company).replace(" ", "%20")
         linkedin_link = f"https://www.linkedin.com/search/results/people/?keywords=HR%20Recruiter%20{company_query}"
         
         leads.append({
             "Company Name": company,
-            "HR Emails": ", ".join(emails),
             "HR LinkedIn": linkedin_link
         })
         
