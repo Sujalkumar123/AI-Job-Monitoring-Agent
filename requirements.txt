@@ -7,3 +7,5 @@ pandas
 schedule
 fuzzywuzzy
 python-Levenshtein
+streamlit
+plotly
