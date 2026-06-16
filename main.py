@@ -1,6 +1,6 @@
 """
 Main orchestrator for the Job Monitoring Agent.
-Runs all scrapers, processes results, and exports to Excel/CSV.
+Runs all scrapers across ALL analyst roles, processes results, and exports to Excel/CSV.
 """
 
 import os
@@ -30,25 +30,30 @@ logging.basicConfig(
 logger = logging.getLogger("JobAgent")
 
 
-def run_agent(role: str = None, location: str = None):
+def run_agent(role: str = None, location: str = None, days_ago: int = 7):
     """
     Main agent execution:
-    1. Scrape all platforms
+    1. Scrape all platforms (each scraper handles ALL roles internally)
     2. Process and deduplicate
     3. Merge with existing data
     4. Export to Excel + CSV
+    
+    Args:
+        role: Not used anymore (each scraper iterates all roles from config)
+        location: Location filter (default from config)
+        days_ago: How many days back to search (default 7)
     """
-    role = role or config.SEARCH_ROLE
     location = location or config.SEARCH_LOCATION
 
     logger.info("=" * 70)
     logger.info(f"🚀 Job Monitoring Agent Started")
-    logger.info(f"   Role: {role}")
+    logger.info(f"   Roles: {len(config.ALL_SEARCH_ROLES)} analyst roles")
     logger.info(f"   Location: {location}")
+    logger.info(f"   Time Filter: Last {days_ago} days")
     logger.info(f"   Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 70)
 
-    # ── 1. Scrape all platforms ──
+    # ── 1. Scrape all platforms (each handles multi-role internally) ──
     all_jobs = []
     scrapers = [
         ("Naukri", NaukriScraper()),
@@ -62,14 +67,14 @@ def run_agent(role: str = None, location: str = None):
     for name, scraper in scrapers:
         try:
             logger.info(f"\n{'─' * 50}")
-            logger.info(f"📋 Scraping: {name}")
+            logger.info(f"📋 Scraping: {name} (all analyst roles)")
             logger.info(f"{'─' * 50}")
 
-            jobs = scraper.scrape(role=role, location=location)
+            jobs = scraper.scrape(location=location, days_ago=days_ago)
             platform_stats[name] = len(jobs)
             all_jobs.extend(jobs)
 
-            logger.info(f"✅ {name}: {len(jobs)} jobs found")
+            logger.info(f"✅ {name}: {len(jobs)} jobs found across all roles")
 
         except Exception as e:
             logger.error(f"❌ {name} scraper failed: {e}")
@@ -125,7 +130,7 @@ def run_agent(role: str = None, location: str = None):
 
 
 if __name__ == "__main__":
-    # Allow custom role from command line
-    # Usage: python main.py "Data Scientist"
-    custom_role = sys.argv[1] if len(sys.argv) > 1 else None
-    run_agent(role=custom_role)
+    # Allow custom days_ago from command line
+    # Usage: python main.py 7  (for last 7 days)
+    custom_days = int(sys.argv[1]) if len(sys.argv) > 1 else 7
+    run_agent(days_ago=custom_days)

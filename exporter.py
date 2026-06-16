@@ -3,6 +3,7 @@ Excel/CSV exporter module.
 - Creates or updates the output Excel file
 - Applies formatting and column styling
 - Supports append mode to avoid duplicates
+- Updated with new date categories and Days Ago column
 """
 
 import os
@@ -98,13 +99,14 @@ def _format_excel(filepath: str, num_rows: int):
         data_font = Font(name="Calibri", size=11)
         data_alignment = Alignment(vertical="center", wrap_text=True)
 
-        # Category color mapping
+        # Category color mapping (updated for new categories)
         category_colors = {
-            "Posted Today": "C6EFCE",        # Green
-            "Posted Yesterday": "D9E1F2",     # Light blue
-            "Posted 2 Days Ago": "FCE4D6",    # Light orange
-            "Posted 3-7 Days Ago": "FFF2CC",   # Light yellow
-            "Posted More Than 1 Week Ago": "F2F2F2",  # Light gray
+            "Posted Today": "C6EFCE",             # Green
+            "Posted Yesterday": "D9E1F2",          # Light blue
+            "Posted 2-7 Days Ago": "FCE4D6",       # Light orange
+            "Posted 8-15 Days Ago": "FFF2CC",       # Light yellow
+            "Posted 16-30 Days Ago": "E2EFDA",      # Light sage
+            "Posted More Than 1 Month Ago": "F2F2F2",  # Light gray
         }
 
         for row in range(2, num_rows + 2):
@@ -124,8 +126,8 @@ def _format_excel(filepath: str, num_rows: int):
                     fill_type="solid",
                 )
 
-            # Make job link a clickable hyperlink
-            link_cell = ws.cell(row=row, column=8)
+            # Make job link a clickable hyperlink (column 9 now with Days Ago at 7)
+            link_cell = ws.cell(row=row, column=9)
             if link_cell.value and str(link_cell.value).startswith("http"):
                 link_cell.hyperlink = str(link_cell.value)
                 link_cell.font = Font(name="Calibri", size=11, color="0563C1", underline="single")
@@ -138,8 +140,9 @@ def _format_excel(filepath: str, num_rows: int):
             4: 12,   # Platform Source
             5: 15,   # Date Posted
             6: 28,   # Posting Category
-            7: 20,   # Salary Package
-            8: 50,   # Job Link
+            7: 10,   # Days Ago
+            8: 20,   # Salary Package
+            9: 50,   # Job Link
         }
 
         for col, width in column_widths.items():

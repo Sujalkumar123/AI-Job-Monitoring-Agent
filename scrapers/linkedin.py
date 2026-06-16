@@ -1,6 +1,7 @@
 """
 LinkedIn scraper using the python-jobspy library.
 python-jobspy handles LinkedIn's anti-scraping measures internally.
+Now scrapes ALL analyst roles across LinkedIn, Indeed (via jobspy).
 """
 
 import logging
@@ -16,38 +17,53 @@ class LinkedInScraper(BaseScraper):
 
     PLATFORM_NAME = "LinkedIn"
 
-    def scrape(self, role: str = None, location: str = None) -> list[dict]:
-        """Scrape Data Analyst jobs from LinkedIn via python-jobspy."""
-        role = role or config.SEARCH_ROLE
+    def scrape(self, role: str = None, location: str = None, days_ago: int = 7) -> list[dict]:
+        """Scrape analyst jobs from LinkedIn via python-jobspy for ALL roles."""
         location = location or config.SEARCH_LOCATION
         all_jobs = []
+
+        # Convert days_ago to hours for jobspy
+        hours_old = days_ago * 24
+        if hours_old > 720:  # Cap at 30 days
+            hours_old = 720
+
+        # Scrape all analyst roles
+        roles_to_search = config.ALL_SEARCH_ROLES
 
         try:
             from jobspy import scrape_jobs
 
-            logger.info(f"[LinkedIn] Scraping via python-jobspy: '{role}' in '{location}'")
+            for search_role in roles_to_search:
+                try:
+                    logger.info(f"[LinkedIn] Scraping: '{search_role}' in '{location}' (last {days_ago} days)")
 
-            results = scrape_jobs(
-                site_name=["linkedin"],
-                search_term=role,
-                location=location,
-                results_wanted=50,
-                country_indeed="India",
-                hours_old=168,  # Last 7 days
-                experience_levels=["entry_level"],
-            )
+                    results = scrape_jobs(
+                        site_name=["linkedin"],
+                        search_term=search_role,
+                        location=location,
+                        results_wanted=30,
+                        country_indeed="India",
+                        hours_old=hours_old,
+                        experience_levels=["entry_level"],
+                    )
 
-            if results is not None and not results.empty:
-                for _, row in results.iterrows():
-                    try:
-                        job = self._convert_row(row)
-                        if job and job.get("Company Name"):
-                            all_jobs.append(job)
-                    except Exception as e:
-                        logger.debug(f"[LinkedIn] Error converting row: {e}")
-                        continue
+                    if results is not None and not results.empty:
+                        for _, row in results.iterrows():
+                            try:
+                                job = self._convert_row(row)
+                                if job and job.get("Company Name"):
+                                    all_jobs.append(job)
+                            except Exception as e:
+                                logger.debug(f"[LinkedIn] Error converting row: {e}")
+                                continue
 
-            logger.info(f"[LinkedIn] Total jobs scraped: {len(all_jobs)}")
+                    logger.info(f"[LinkedIn] '{search_role}': {len(results) if results is not None else 0} results")
+
+                except Exception as e:
+                    logger.warning(f"[LinkedIn] Failed for role '{search_role}': {e}")
+                    continue
+
+            logger.info(f"[LinkedIn] Total jobs scraped across all roles: {len(all_jobs)}")
 
         except ImportError:
             logger.error("[LinkedIn] python-jobspy not installed. Run: pip install python-jobspy")
@@ -94,7 +110,7 @@ class LinkedInScraper(BaseScraper):
 
         return self.make_job_record(
             company=company or "Unknown",
-            title=title or "Data Analyst",
+            title=title or "Analyst",
             location=location_val,
             platform=self.PLATFORM_NAME,
             date_posted=date_posted,

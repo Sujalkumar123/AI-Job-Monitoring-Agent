@@ -1,6 +1,7 @@
 """
 Wellfound (formerly AngelList) scraper for job listings.
 Scrapes Wellfound's public job search pages.
+Scrapes ALL analyst roles.
 """
 
 import re
@@ -27,44 +28,51 @@ class WellfoundScraper(BaseScraper):
             "Sec-Fetch-Mode": "navigate",
         })
 
-    def scrape(self, role: str = None, location: str = None) -> list[dict]:
-        """Scrape Data Analyst jobs from Wellfound."""
-        role = role or config.SEARCH_ROLE
+    def scrape(self, role: str = None, location: str = None, days_ago: int = 7) -> list[dict]:
+        """Scrape analyst jobs from Wellfound for ALL roles."""
         location = location or config.SEARCH_LOCATION
         all_jobs = []
 
-        # Try multiple URL formats
-        urls = [
-            config.get_wellfound_url(role),
-            f"https://wellfound.com/jobs?role={role.replace(' ', '+')}+Entry+Level&location={location.replace(' ', '+')}",
-            f"https://wellfound.com/role/data-analyst",
-        ]
+        # Scrape all analyst roles
+        roles_to_search = config.ALL_SEARCH_ROLES
 
-        for url in urls:
-            resp = self._fetch(url)
-            if not resp:
-                logger.warning(f"[Wellfound] Failed to fetch: {url}")
-                continue
+        for search_role in roles_to_search:
+            logger.info(f"[Wellfound] Searching role: '{search_role}'")
+            role_jobs = []
 
-            # Try parsing Apollo state (JSON embedded in page)
-            apollo_jobs = self._parse_apollo_state(resp.text)
-            if apollo_jobs:
-                all_jobs.extend(apollo_jobs)
-                logger.info(f"[Wellfound] Found {len(apollo_jobs)} jobs via Apollo state")
-                break
+            # Try multiple URL formats
+            urls = [
+                config.get_wellfound_url(search_role),
+                f"https://wellfound.com/jobs?role={search_role.replace(' ', '+')}+Entry+Level&location={location.replace(' ', '+')}",
+            ]
 
-            # Fallback: parse HTML directly
-            html_jobs = self._parse_html(resp.text)
-            if html_jobs:
-                all_jobs.extend(html_jobs)
-                logger.info(f"[Wellfound] Found {len(html_jobs)} jobs via HTML parsing")
-                break
+            for url in urls:
+                resp = self._fetch(url)
+                if not resp:
+                    logger.warning(f"[Wellfound] Failed to fetch: {url}")
+                    continue
 
-            self._rate_limit()
+                # Try parsing Apollo state (JSON embedded in page)
+                apollo_jobs = self._parse_apollo_state(resp.text)
+                if apollo_jobs:
+                    role_jobs.extend(apollo_jobs)
+                    logger.info(f"[Wellfound] Found {len(apollo_jobs)} jobs via Apollo state for '{search_role}'")
+                    break
+
+                # Fallback: parse HTML directly
+                html_jobs = self._parse_html(resp.text)
+                if html_jobs:
+                    role_jobs.extend(html_jobs)
+                    logger.info(f"[Wellfound] Found {len(html_jobs)} jobs via HTML for '{search_role}'")
+                    break
+
+                self._rate_limit()
+
+            all_jobs.extend(role_jobs)
 
         # Filter for India-based jobs
         india_jobs = self._filter_india(all_jobs, location)
-        logger.info(f"[Wellfound] Total India jobs: {len(india_jobs)}")
+        logger.info(f"[Wellfound] Total India jobs across all roles: {len(india_jobs)}")
         return india_jobs
 
     def _parse_apollo_state(self, html: str) -> list[dict]:
@@ -158,7 +166,7 @@ class WellfoundScraper(BaseScraper):
 
         return self.make_job_record(
             company=str(company).strip() if company else "Unknown",
-            title=str(title).strip() if title else "Data Analyst",
+            title=str(title).strip() if title else "Analyst",
             location=str(location_val).strip(),
             platform=self.PLATFORM_NAME,
             date_posted=str(date_posted),
@@ -214,7 +222,7 @@ class WellfoundScraper(BaseScraper):
 
                 jobs.append(self.make_job_record(
                     company=company or "Unknown",
-                    title=title or "Data Analyst",
+                    title=title or "Analyst",
                     location=loc,
                     platform=self.PLATFORM_NAME,
                     date_posted="",

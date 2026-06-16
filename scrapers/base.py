@@ -92,18 +92,20 @@ class BaseScraper(ABC):
             "Platform Source": platform,
             "Date Posted": (date_posted or "").strip(),
             "Posting Category": "",  # Filled later by processor
+            "Days Ago": None,  # Filled later by processor
             "Salary Package": (salary or "NULL").strip() if salary else "NULL",
             "Job Link": (link or "").strip(),
         }
 
     @abstractmethod
-    def scrape(self, role: str = None, location: str = None) -> list[dict]:
+    def scrape(self, role: str = None, location: str = None, days_ago: int = 7) -> list[dict]:
         """
         Scrape job listings from this platform.
 
         Args:
             role: Job role to search (default from config)
             location: Location filter (default from config)
+            days_ago: How many days back to search (default 7)
 
         Returns:
             List of job record dicts with standardized keys.

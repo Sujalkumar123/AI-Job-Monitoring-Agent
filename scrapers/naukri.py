@@ -1,6 +1,7 @@
 """
 Naukri.com scraper for job listings.
 Uses requests + BeautifulSoup to parse Naukri's search results.
+Scrapes ALL analyst roles with time filter support.
 """
 
 import re
@@ -18,30 +19,39 @@ class NaukriScraper(BaseScraper):
 
     PLATFORM_NAME = "Naukri"
 
-    def scrape(self, role: str = None, location: str = None) -> list[dict]:
-        """Scrape Data Analyst jobs from Naukri.com."""
-        role = role or config.SEARCH_ROLE
+    def scrape(self, role: str = None, location: str = None, days_ago: int = 7) -> list[dict]:
+        """Scrape analyst jobs from Naukri.com for ALL roles."""
         location = location or config.SEARCH_LOCATION
         all_jobs = []
 
-        for page in range(1, config.MAX_PAGES + 1):
-            url = config.get_naukri_url(role, page)
-            resp = self._fetch(url)
+        # Scrape all analyst roles
+        roles_to_search = config.ALL_SEARCH_ROLES
 
-            if not resp:
-                logger.warning(f"[Naukri] Failed to fetch page {page}")
-                break
+        for search_role in roles_to_search:
+            logger.info(f"[Naukri] Searching role: '{search_role}'")
+            role_jobs = []
 
-            jobs = self._parse_page(resp.text)
-            if not jobs:
-                logger.info(f"[Naukri] No jobs found on page {page}, stopping pagination")
-                break
+            for page in range(1, config.MAX_PAGES + 1):
+                url = config.get_naukri_url(search_role, page, days_ago)
+                resp = self._fetch(url)
 
-            all_jobs.extend(jobs)
-            logger.info(f"[Naukri] Page {page}: found {len(jobs)} jobs")
-            self._rate_limit()
+                if not resp:
+                    logger.warning(f"[Naukri] Failed to fetch page {page} for '{search_role}'")
+                    break
 
-        logger.info(f"[Naukri] Total jobs scraped: {len(all_jobs)}")
+                jobs = self._parse_page(resp.text)
+                if not jobs:
+                    logger.info(f"[Naukri] No jobs found on page {page} for '{search_role}', stopping")
+                    break
+
+                role_jobs.extend(jobs)
+                logger.info(f"[Naukri] '{search_role}' page {page}: found {len(jobs)} jobs")
+                self._rate_limit()
+
+            all_jobs.extend(role_jobs)
+            logger.info(f"[Naukri] '{search_role}': {len(role_jobs)} jobs total")
+
+        logger.info(f"[Naukri] Total jobs scraped across all roles: {len(all_jobs)}")
         return all_jobs
 
     def _parse_page(self, html: str) -> list[dict]:
@@ -130,7 +140,7 @@ class NaukriScraper(BaseScraper):
 
         return self.make_job_record(
             company=company or "Unknown",
-            title=title or "Data Analyst",
+            title=title or "Analyst",
             location=location_text,
             platform=self.PLATFORM_NAME,
             date_posted=date_posted,

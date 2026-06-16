@@ -11,8 +11,41 @@ SEARCH_ROLE = "Data Analyst"
 SEARCH_LOCATION = "India"
 SEARCH_EXPERIENCE = 0  # 0 for Entry Level / Freshers
 
-# Easily extensible for other roles
-ALTERNATE_ROLES = ["Data Scientist", "Business Analyst"]
+# ─── All Analyst Roles (SQL / Power BI / Python focused) ────────────
+ALL_SEARCH_ROLES = [
+    "Data Analyst",
+    "Business Analyst",
+    "SQL Analyst",
+    "BI Analyst",
+    "Power BI Developer",
+    "Power BI Analyst",
+    "MIS Analyst",
+    "MIS Executive",
+    "Data Scientist",
+    "Business Intelligence Analyst",
+    "Reporting Analyst",
+    "Analytics Analyst",
+    "Python Developer",
+    "Data Engineer",
+    "ETL Developer",
+    "Database Analyst",
+    "Insights Analyst",
+    "Research Analyst",
+]
+
+# Skills to look for in job descriptions
+SEARCH_SKILLS = ["SQL", "Power BI", "Python"]
+
+# ─── Time Filter Options (for Dashboard) ────────────────────────────
+TIME_FILTER_OPTIONS = {
+    "Last 1 Day": 1,
+    "Last 7 Days": 7,
+    "Last 15 Days": 15,
+    "Last 1 Month": 30,
+    "All Time": 9999,
+}
+
+DEFAULT_TIME_FILTER = "Last 7 Days"
 
 # ─── Rate Limiting ───────────────────────────────────────────────────
 REQUEST_DELAY_MIN = 2  # Minimum seconds between requests
@@ -21,7 +54,7 @@ MAX_RETRIES = 3        # Max retries per request
 RETRY_DELAY = 5        # Seconds to wait before retrying
 
 # ─── Pagination ──────────────────────────────────────────────────────
-MAX_PAGES = 5  # Maximum pages to scrape per platform
+MAX_PAGES = 3  # Maximum pages to scrape per platform per role
 
 # ─── Output ──────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -44,20 +77,39 @@ USER_AGENTS = [
 
 # ─── Platform-Specific URLs ─────────────────────────────────────────
 
-def get_naukri_url(role, page=1):
-    """Generate Naukri.com search URL."""
+def get_naukri_url(role, page=1, days_ago=7):
+    """Generate Naukri.com search URL with freshness filter."""
     role_slug = role.lower().replace(" ", "-")
     exp = SEARCH_EXPERIENCE
+    # Naukri freshness filter
+    if days_ago <= 1:
+        freshness = 1
+    elif days_ago <= 7:
+        freshness = 7
+    elif days_ago <= 15:
+        freshness = 15
+    else:
+        freshness = 30
+
     if page == 1:
-        return f"https://www.naukri.com/{role_slug}-jobs-in-india?experience={exp}"
-    return f"https://www.naukri.com/{role_slug}-jobs-in-india-{page}?experience={exp}"
+        return f"https://www.naukri.com/{role_slug}-jobs-in-india?experience={exp}&jobAge={freshness}"
+    return f"https://www.naukri.com/{role_slug}-jobs-in-india-{page}?experience={exp}&jobAge={freshness}"
 
 
-def get_indeed_url(role, page=0):
-    """Generate Indeed India search URL."""
+def get_indeed_url(role, page=0, days_ago=7):
+    """Generate Indeed India search URL with time filter."""
     query = role.replace(" ", "+")
-    # sccl=entry_level is the parameter for Indeed India experience level filtering
-    return f"https://in.indeed.com/jobs?q={query}&l=India&sccl=entry_level&start={page * 10}"
+    # Indeed fromage parameter: number of days
+    if days_ago <= 1:
+        fromage = 1
+    elif days_ago <= 7:
+        fromage = 7
+    elif days_ago <= 15:
+        fromage = 14
+    else:
+        fromage = 30
+
+    return f"https://in.indeed.com/jobs?q={query}&l=India&sccl=entry_level&fromage={fromage}&start={page * 10}"
 
 
 def get_wellfound_url(role):
@@ -74,6 +126,7 @@ COLUMNS = [
     "Platform Source",
     "Date Posted",
     "Posting Category",
+    "Days Ago",
     "Salary Package",
     "Job Link",
 ]
@@ -82,9 +135,10 @@ COLUMNS = [
 DATE_CATEGORIES = {
     0: "Posted Today",
     1: "Posted Yesterday",
-    2: "Posted 2 Days Ago",
-    "3-7": "Posted 3-7 Days Ago",
-    "7+": "Posted More Than 1 Week Ago",
+    "2-7": "Posted 2-7 Days Ago",
+    "8-15": "Posted 8-15 Days Ago",
+    "16-30": "Posted 16-30 Days Ago",
+    "30+": "Posted More Than 1 Month Ago",
 }
 
 # ─── Logging ─────────────────────────────────────────────────────────

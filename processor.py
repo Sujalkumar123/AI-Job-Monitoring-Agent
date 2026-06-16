@@ -4,6 +4,7 @@ Data processor module:
 - Categorizes postings by recency
 - Deduplicates across platforms using fuzzy matching
 - Normalizes salary and validates records
+- Adds numeric 'Days Ago' field for filtering
 """
 
 import re
@@ -24,7 +25,7 @@ TODAY = datetime.now().date()
 def process_jobs(jobs: list[dict]) -> list[dict]:
     """
     Full processing pipeline:
-    1. Normalize dates → assign posting category
+    1. Normalize dates → assign posting category + days_ago
     2. Normalize salary
     3. Validate records
     4. Deduplicate
@@ -55,6 +56,7 @@ def _normalize_date(job: dict) -> dict:
     if not raw_date:
         job["Date Posted"] = ""
         job["Posting Category"] = "Unknown"
+        job["Days Ago"] = None
         return job
 
     # ── Pattern: "X days ago", "X day ago", "Xd ago" ──
@@ -91,9 +93,11 @@ def _normalize_date(job: dict) -> dict:
         actual_date = TODAY - timedelta(days=days_ago)
         job["Date Posted"] = actual_date.strftime("%d %b %Y")
         job["Posting Category"] = _categorize_days(days_ago)
+        job["Days Ago"] = days_ago
     else:
         # Keep original text if we can't parse
         job["Posting Category"] = "Unknown"
+        job["Days Ago"] = None
 
     return job
 
@@ -131,12 +135,14 @@ def _categorize_days(days_ago: int) -> str:
         return "Posted Today"
     elif days_ago == 1:
         return "Posted Yesterday"
-    elif days_ago == 2:
-        return "Posted 2 Days Ago"
-    elif 3 <= days_ago <= 7:
-        return "Posted 3-7 Days Ago"
+    elif 2 <= days_ago <= 7:
+        return "Posted 2-7 Days Ago"
+    elif 8 <= days_ago <= 15:
+        return "Posted 8-15 Days Ago"
+    elif 16 <= days_ago <= 30:
+        return "Posted 16-30 Days Ago"
     else:
-        return "Posted More Than 1 Week Ago"
+        return "Posted More Than 1 Month Ago"
 
 
 def _normalize_salary(job: dict) -> dict:

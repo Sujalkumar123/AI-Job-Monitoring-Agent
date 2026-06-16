@@ -1,6 +1,7 @@
 """
 Indeed India scraper for job listings.
 Uses requests + BeautifulSoup to parse Indeed's search results.
+Scrapes ALL analyst roles with time filter support.
 """
 
 import re
@@ -30,30 +31,39 @@ class IndeedScraper(BaseScraper):
             "Upgrade-Insecure-Requests": "1",
         })
 
-    def scrape(self, role: str = None, location: str = None) -> list[dict]:
-        """Scrape Data Analyst jobs from Indeed India."""
-        role = role or config.SEARCH_ROLE
+    def scrape(self, role: str = None, location: str = None, days_ago: int = 7) -> list[dict]:
+        """Scrape analyst jobs from Indeed India for ALL roles."""
         location = location or config.SEARCH_LOCATION
         all_jobs = []
 
-        for page in range(config.MAX_PAGES):
-            url = config.get_indeed_url(role, page)
-            resp = self._fetch(url)
+        # Scrape all analyst roles
+        roles_to_search = config.ALL_SEARCH_ROLES
 
-            if not resp:
-                logger.warning(f"[Indeed] Failed to fetch page {page + 1}")
-                break
+        for search_role in roles_to_search:
+            logger.info(f"[Indeed] Searching role: '{search_role}'")
+            role_jobs = []
 
-            jobs = self._parse_page(resp.text)
-            if not jobs:
-                logger.info(f"[Indeed] No jobs found on page {page + 1}, stopping pagination")
-                break
+            for page in range(config.MAX_PAGES):
+                url = config.get_indeed_url(search_role, page, days_ago)
+                resp = self._fetch(url)
 
-            all_jobs.extend(jobs)
-            logger.info(f"[Indeed] Page {page + 1}: found {len(jobs)} jobs")
-            self._rate_limit()
+                if not resp:
+                    logger.warning(f"[Indeed] Failed to fetch page {page + 1} for '{search_role}'")
+                    break
 
-        logger.info(f"[Indeed] Total jobs scraped: {len(all_jobs)}")
+                jobs = self._parse_page(resp.text)
+                if not jobs:
+                    logger.info(f"[Indeed] No jobs found on page {page + 1} for '{search_role}', stopping")
+                    break
+
+                role_jobs.extend(jobs)
+                logger.info(f"[Indeed] '{search_role}' page {page + 1}: found {len(jobs)} jobs")
+                self._rate_limit()
+
+            all_jobs.extend(role_jobs)
+            logger.info(f"[Indeed] '{search_role}': {len(role_jobs)} jobs total")
+
+        logger.info(f"[Indeed] Total jobs scraped across all roles: {len(all_jobs)}")
         return all_jobs
 
     def _parse_page(self, html: str) -> list[dict]:
@@ -153,7 +163,7 @@ class IndeedScraper(BaseScraper):
 
         return self.make_job_record(
             company=company or "Unknown",
-            title=title or "Data Analyst",
+            title=title or "Analyst",
             location=location_text,
             platform=self.PLATFORM_NAME,
             date_posted=date_posted,
