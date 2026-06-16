@@ -48,13 +48,13 @@ TIME_FILTER_OPTIONS = {
 DEFAULT_TIME_FILTER = "Last 7 Days"
 
 # ─── Rate Limiting ───────────────────────────────────────────────────
-REQUEST_DELAY_MIN = 2  # Minimum seconds between requests
-REQUEST_DELAY_MAX = 5  # Maximum seconds between requests
-MAX_RETRIES = 3        # Max retries per request
-RETRY_DELAY = 5        # Seconds to wait before retrying
+REQUEST_DELAY_MIN = 1  # Minimum seconds between requests
+REQUEST_DELAY_MAX = 2  # Maximum seconds between requests
+MAX_RETRIES = 1        # Max retries per request (keep fast)
+RETRY_DELAY = 2        # Seconds to wait before retrying
 
 # ─── Pagination ──────────────────────────────────────────────────────
-MAX_PAGES = 3  # Maximum pages to scrape per platform per role
+MAX_PAGES = 1  # Maximum pages to scrape per platform per role (1 page = fast)
 
 # ─── Output ──────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

@@ -27,8 +27,8 @@ class LinkedInScraper(BaseScraper):
         if hours_old > 720:  # Cap at 30 days
             hours_old = 720
 
-        # Scrape all analyst roles
-        roles_to_search = config.ALL_SEARCH_ROLES
+        # LinkedIn via jobspy is slow — only search top 5 roles
+        roles_to_search = config.ALL_SEARCH_ROLES[:5]
 
         try:
             from jobspy import scrape_jobs
@@ -41,7 +41,7 @@ class LinkedInScraper(BaseScraper):
                         site_name=["linkedin"],
                         search_term=search_role,
                         location=location,
-                        results_wanted=30,
+                        results_wanted=15,
                         country_indeed="India",
                         hours_old=hours_old,
                         experience_levels=["entry_level"],
